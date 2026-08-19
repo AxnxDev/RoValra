@@ -213,6 +213,24 @@ function getRobuxAmountFromElement(element) {
     return cleanPrice(getEstimateFreeText(element));
 }
 
+function isNavbarRobuxHiddenByStreamerMode(element) {
+    if (!(element instanceof HTMLElement)) return false;
+    if (element.closest('#buy-robux-popover')) return false;
+    if (element.id !== 'nav-robux-amount' && element.id !== 'nav-robux-balance' &&
+        element.closest('#navbar-robux') === null) {
+        return false;
+    }
+
+    try {
+        return (
+            sessionStorage.getItem('rovalra_streamermode') === 'true' &&
+            sessionStorage.getItem('rovalra_hideRobux') === 'true'
+        );
+    } catch (e) {
+        return false;
+    }
+}
+
 function shouldUseTrackedNavbarCurrency(element) {
     if (!(element instanceof HTMLElement)) return false;
     if (element.closest('#buy-robux-popover')) return false;
@@ -713,6 +731,21 @@ async function attachUsdEstimate(icon) {
 
     const { element, amount } = amountInfo;
 
+    if (isNavbarRobuxHiddenByStreamerMode(element)) {
+        element
+            .querySelectorAll('.rovalra-usd-estimate')
+            .forEach((el) => el.remove());
+        if (
+            element.nextElementSibling instanceof HTMLElement &&
+            element.nextElementSibling.classList.contains(
+                'rovalra-usd-estimate',
+            )
+        ) {
+            element.nextElementSibling.remove();
+        }
+        return;
+    }
+
     try {
         const resolvedAmount = await resolveEstimateRobuxAmount(
             element,
@@ -745,6 +778,21 @@ async function attachUsdEstimateToValueElement(element) {
     if (!amountInfo) return;
 
     const { element: amountElement, amount } = amountInfo;
+
+    if (isNavbarRobuxHiddenByStreamerMode(amountElement)) {
+        amountElement
+            .querySelectorAll('.rovalra-usd-estimate')
+            .forEach((el) => el.remove());
+        if (
+            amountElement.nextElementSibling instanceof HTMLElement &&
+            amountElement.nextElementSibling.classList.contains(
+                'rovalra-usd-estimate',
+            )
+        ) {
+            amountElement.nextElementSibling.remove();
+        }
+        return;
+    }
 
     try {
         const resolvedAmount = await resolveEstimateRobuxAmount(
@@ -925,6 +973,10 @@ export function init() {
     document.addEventListener(NAVBAR_BALANCE_UPDATED_EVENT, () => {
         scheduleUsdRefresh(0);
         scheduleUsdRefresh(50);
+    });
+
+    document.addEventListener('rovalra-streamer-mode', () => {
+        scheduleUsdRefresh(0);
     });
 
     observeElement(
